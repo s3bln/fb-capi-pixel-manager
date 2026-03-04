@@ -6,10 +6,10 @@
     <div class="fbc-header">
         <div>
             <h1><span>📊</span> FB CAPI & Pixel Manager</h1>
-            <p>Gestionnaire Facebook Pixel &amp; Conversions API pour SureCart</p>
+            <p><?php echo fbc_t( 'Facebook Pixel & Conversions API Manager for SureCart & WooCommerce' ); ?></p>
         </div>
         <div class="fbc-status-badge">
-            <?php echo $is_configured ? '🟢 Connecté' : '🔴 Non configuré'; ?>
+            <?php echo $is_configured ? fbc_t( '🟢 Connected' ) : fbc_t( '🔴 Not configured' ); ?>
         </div>
     </div>
 
@@ -21,21 +21,21 @@
             <div class="fbc-stat-icon purple">📡</div>
             <div>
                 <span class="fbc-stat-num"><?php echo $total_events; ?></span>
-                <span class="fbc-stat-label">Total événements</span>
+                <span class="fbc-stat-label"><?php echo fbc_t( 'Total events' ); ?></span>
             </div>
         </div>
         <div class="fbc-stat">
             <div class="fbc-stat-icon orange">⚠️</div>
             <div>
                 <span class="fbc-stat-num"><?php echo $error_events; ?></span>
-                <span class="fbc-stat-label">Erreurs</span>
+                <span class="fbc-stat-label"><?php echo fbc_t( 'Errors' ); ?></span>
             </div>
         </div>
         <div class="fbc-stat">
             <div class="fbc-stat-icon green">🎯</div>
             <div>
                 <span class="fbc-stat-num"><?php echo $active_events; ?>/6</span>
-                <span class="fbc-stat-label">Événements actifs</span>
+                <span class="fbc-stat-label"><?php echo fbc_t( 'Active events' ); ?></span>
             </div>
         </div>
     </div>
@@ -43,8 +43,8 @@
     <!-- ═══ PROGRESS ═══ -->
     <div class="fbc-progress">
         <div class="fbc-progress-header">
-            <span>✅ Taux de réussite</span>
-            <small><?php echo $success_events; ?> réussis sur <?php echo $total_events; ?></small>
+            <span><?php echo fbc_t( '✅ Success rate' ); ?></span>
+            <small><?php echo $success_events; ?> <?php echo fbc_t( 'successful out of' ); ?> <?php echo $total_events; ?></small>
         </div>
         <div class="fbc-progress-bar">
             <div class="fbc-progress-fill" style="width: <?php echo $success_rate; ?>%"></div>
@@ -53,8 +53,8 @@
 
     <!-- ═══ TABS ═══ -->
     <div class="fbc-tabs">
-        <button class="fbc-tab active" data-tab="settings" onclick="fbcTab('settings', this)">⚙️ Réglages</button>
-        <button class="fbc-tab" data-tab="events"   onclick="fbcTab('events', this)">🎯 Événements</button>
+        <button class="fbc-tab active" data-tab="settings" onclick="fbcTab('settings', this)"><?php echo fbc_t( '⚙️ Settings' ); ?></button>
+        <button class="fbc-tab" data-tab="events"   onclick="fbcTab('events', this)"><?php echo fbc_t( '🎯 Events' ); ?></button>
         <button class="fbc-tab" data-tab="logs"     onclick="fbcTab('logs', this)">📋 Logs</button>
         <button class="fbc-tab" data-tab="test"     onclick="fbcTab('test', this)">🧪 Test</button>
     </div>

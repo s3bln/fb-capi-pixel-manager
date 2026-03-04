@@ -4,6 +4,13 @@ All notable changes to **FB CAPI & Pixel Manager** are documented here.
 
 ---
 
+## [2.5.0] — 2026-03
+
+### Ajouts
+- **Internationalisation** : interface admin entièrement en anglais (langue par défaut). Sélecteur de langue dans Réglages pour basculer en français. Toutes les chaînes des vues, notices et messages CAPI sont traduites via `FB_Capi_Lang` / `fbc_t()`.
+
+---
+
 ## [2.4.3] — 2026-03
 
 ### Corrections

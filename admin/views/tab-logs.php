@@ -4,12 +4,12 @@
 
     <!-- ── Logs settings ─────────────────────────────────────────────────── -->
     <div class="fbc-card">
-        <div class="fbc-card-title">⚙️ Paramètres des logs</div>
+        <div class="fbc-card-title"><?php echo fbc_t( '⚙️ Log Settings' ); ?></div>
 
         <div class="fbc-toggle-row">
             <div class="fbc-toggle-info">
-                <strong>Activer les logs</strong>
-                <span>Enregistrer les événements envoyés via la Conversions API</span>
+                <strong><?php echo fbc_t( 'Enable logs' ); ?></strong>
+                <span><?php echo fbc_t( 'Record events sent via the Conversions API' ); ?></span>
             </div>
             <label class="fbc-switch">
                 <input type="checkbox" name="logs_enabled"
@@ -19,18 +19,18 @@
         </div>
 
         <div class="fbc-field" style="margin-top:14px;">
-            <label>Rétention des logs</label>
+            <label><?php echo fbc_t( 'Log retention' ); ?></label>
             <select name="logs_retention_days" class="fbc-select">
                 <?php
                 $retention_options = [
-                    1  => '1 jour',
-                    3  => '3 jours',
-                    7  => '7 jours',
-                    14 => '14 jours',
-                    30 => '30 jours',
-                    60 => '60 jours',
-                    90 => '90 jours',
-                    0  => '♾️ Illimité (non recommandé)',
+                    1  => fbc_t( '1 day' ),
+                    3  => fbc_t( '3 days' ),
+                    7  => fbc_t( '7 days' ),
+                    14 => fbc_t( '14 days' ),
+                    30 => fbc_t( '30 days' ),
+                    60 => fbc_t( '60 days' ),
+                    90 => fbc_t( '90 days' ),
+                    0  => fbc_t( '♾️ Unlimited (not recommended)' ),
                 ];
                 $current_retention = (int) ( $options['logs_retention_days'] ?? 30 );
                 foreach ( $retention_options as $days => $label ) :
@@ -45,10 +45,10 @@
 
         <div style="padding:14px 0 0;">
             <strong style="font-size:13px;color:#111827;display:block;margin-bottom:10px;">
-                Événements à logger
+                <?php echo fbc_t( 'Events to log' ); ?>
             </strong>
             <span style="font-size:11px;color:#9ca3af;display:block;margin-bottom:8px;">
-                Sélectionnez les événements dont vous souhaitez enregistrer les logs
+                <?php echo fbc_t( 'Select events to log' ); ?>
             </span>
             <div class="fbc-logs-events-grid">
                 <?php
@@ -77,7 +77,7 @@
 
         <div class="fbc-actions">
             <button type="submit" name="fb_capi_save_logs_settings" class="fbc-btn fbc-btn-primary">
-                💾 Enregistrer les paramètres
+                <?php echo fbc_t( '💾 Save settings' ); ?>
             </button>
         </div>
     </div>
@@ -85,10 +85,10 @@
     <!-- ── Log viewer ─────────────────────────────────────────────────────── -->
     <div class="fbc-card">
         <div class="fbc-card-title" style="display:flex;align-items:center;justify-content:space-between;">
-            <span>📋 Visualisation des logs</span>
+            <span><?php echo fbc_t( '📋 Log viewer' ); ?></span>
             <button type="button" id="fbc-refresh-btn" onclick="fbcRefreshLogs()" class="fbc-btn fbc-btn-outline" style="font-size:12px;padding:6px 14px;">
                 <span id="fbc-refresh-icon" style="display:inline-block;transition:transform 0.5s;">🔄</span>
-                Rafraîchir
+                <?php echo fbc_t( 'Refresh' ); ?>
             </button>
         </div>
 
@@ -99,8 +99,8 @@
 
     <div class="fbc-actions">
         <button type="submit" name="fb_capi_clear_logs" class="fbc-btn fbc-btn-danger"
-                onclick="return confirm('Effacer tous les logs ?');">
-            🗑️ Effacer les logs
+                onclick="return confirm('<?php echo esc_js( fbc_t( 'Clear all logs?' ) ); ?>');">
+            <?php echo fbc_t( '🗑️ Clear logs' ); ?>
         </button>
     </div>
 

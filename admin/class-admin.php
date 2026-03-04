@@ -58,7 +58,7 @@ class FB_Capi_Admin {
         if ( isset( $_POST['fb_capi_save'] ) && check_admin_referer( 'fb_capi_nonce' ) ) {
             update_option( 'fb_capi_options', FB_Capi_Options::sanitize_all( $_POST ) );
             FB_Capi_Options::invalidate_cache();
-            $notice     = '<div class="fbc-alert success">✅ Réglages enregistrés avec succès !</div>';
+            $notice     = '<div class="fbc-alert success">' . fbc_t( '✅ Settings saved successfully!' ) . '</div>';
             $active_tab = 'settings';
         }
 
@@ -79,14 +79,14 @@ class FB_Capi_Admin {
 
             update_option( 'fb_capi_options', $current );
             FB_Capi_Options::invalidate_cache();
-            $notice     = '<div class="fbc-alert success">✅ Paramètres des logs enregistrés !</div>';
+            $notice     = '<div class="fbc-alert success">' . fbc_t( '✅ Log settings saved!' ) . '</div>';
             $active_tab = 'logs';
         }
 
         // ── Clear logs ────────────────────────────────────────────────────────
         if ( isset( $_POST['fb_capi_clear_logs'] ) && check_admin_referer( 'fb_capi_nonce' ) ) {
             ( new FB_Capi_Sender() )->clear_logs();
-            $notice     = '<div class="fbc-alert success">🗑️ Logs effacés avec succès !</div>';
+            $notice     = '<div class="fbc-alert success">' . fbc_t( '🗑️ Logs cleared successfully!' ) . '</div>';
             $active_tab = 'logs';
         }
 

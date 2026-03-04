@@ -6,40 +6,40 @@ $platform = $options['platform'] ?? 'surecart';
 <div id="panel-events" class="fbc-panel">
 
     <div class="fbc-card">
-        <div class="fbc-card-title">🎯 Événements à tracker</div>
+        <div class="fbc-card-title"><?php echo fbc_t( '🎯 Events to track' ); ?></div>
 
         <?php
         $woo = ( $platform === 'woocommerce' );
         $events = [
             'enable_pageview'         => [
                 'label' => 'PageView',
-                'desc'  => 'Se déclenche à chaque chargement de page',
+                'desc'  => fbc_t( 'Fires on every page load' ),
             ],
             'enable_viewcontent'      => [
                 'label' => 'ViewContent',
                 'desc'  => $woo
-                    ? 'Quand un visiteur consulte une page produit WooCommerce'
-                    : 'Quand un visiteur consulte une page produit SureCart',
+                    ? fbc_t( 'When a visitor views a WooCommerce product page' )
+                    : fbc_t( 'When a visitor views a SureCart product page' ),
             ],
             'enable_addtocart'        => [
                 'label' => 'AddToCart',
-                'desc'  => 'Quand un produit est ajouté au panier',
+                'desc'  => fbc_t( 'When a product is added to the cart' ),
             ],
             'enable_initiatecheckout' => [
                 'label' => 'InitiateCheckout',
                 'desc'  => $woo
-                    ? 'Quand la page checkout WooCommerce est chargée'
-                    : 'Quand le formulaire de paiement SureCart s\'affiche',
+                    ? fbc_t( 'When the WooCommerce checkout page is loaded' )
+                    : fbc_t( 'When the SureCart payment form is displayed' ),
             ],
             'enable_purchase'         => [
                 'label' => 'Purchase',
                 'desc'  => $woo
-                    ? 'Quand un achat est complété (hook woocommerce_thankyou)'
-                    : 'Quand un achat est complété (via webhook SureCart)',
+                    ? fbc_t( 'When a purchase is completed (woocommerce_thankyou hook)' )
+                    : fbc_t( 'When a purchase is completed (via SureCart webhook)' ),
             ],
             'enable_addpaymentinfo'   => [
                 'label' => 'AddPaymentInfo',
-                'desc'  => 'Quand les informations de paiement sont saisies',
+                'desc'  => fbc_t( 'When payment information is entered' ),
             ],
         ];
         foreach ( $events as $key => $event ) :
@@ -60,29 +60,40 @@ $platform = $options['platform'] ?? 'surecart';
 
     <?php if ( $platform === 'woocommerce' ) : ?>
     <div class="fbc-card">
-        <div class="fbc-card-title">🔗 Intégration WooCommerce</div>
+        <div class="fbc-card-title"><?php echo fbc_t( '🔗 WooCommerce Integration' ); ?></div>
         <p style="font-size:13px;color:#6b7280;margin:0 0 12px;">
-            En mode WooCommerce, <strong>aucun webhook n'est nécessaire</strong>. Le plugin utilise
-            le hook natif <code>woocommerce_thankyou</code> pour envoyer l'événement Purchase
-            côté serveur dès que la page de confirmation de commande est affichée.
+            <?php if ( FB_Capi_Lang::is_fr() ) : ?>
+                En mode WooCommerce, <strong>aucun webhook n'est nécessaire</strong>. Le plugin utilise
+                le hook natif <code>woocommerce_thankyou</code> pour envoyer l'événement Purchase
+                côté serveur dès que la page de confirmation de commande est affichée.
+            <?php else : ?>
+                In WooCommerce mode, <strong>no webhook is required</strong>. The plugin uses
+                the native <code>woocommerce_thankyou</code> hook to send the Purchase event
+                server-side as soon as the order confirmation page is displayed.
+            <?php endif; ?>
         </p>
         <p style="font-size:13px;color:#6b7280;margin:0;">
-            Les données transmises à Meta incluent automatiquement la valeur, la devise,
-            les IDs produits, la quantité et les informations de facturation (advanced matching).
+            <?php if ( FB_Capi_Lang::is_fr() ) : ?>
+                Les données transmises à Meta incluent automatiquement la valeur, la devise,
+                les IDs produits, la quantité et les informations de facturation (advanced matching).
+            <?php else : ?>
+                Data sent to Meta automatically includes value, currency, product IDs,
+                quantity and billing information (advanced matching).
+            <?php endif; ?>
         </p>
     </div>
     <?php else : ?>
     <div class="fbc-card">
-        <div class="fbc-card-title">🔗 Webhook SureCart pour Purchase</div>
+        <div class="fbc-card-title"><?php echo fbc_t( '🔗 SureCart Webhook for Purchase' ); ?></div>
         <p style="font-size:13px;color:#6b7280;margin:0 0 12px;">
-            Ajoutez cette URL dans SureCart → Settings → Webhooks → Événement <strong>order.paid</strong> :
+            <?php echo fbc_t( 'Add this URL in SureCart → Settings → Webhooks → Event <strong>order.paid</strong>:' ); ?>
         </p>
         <div class="fbc-code"><?php echo esc_url( rest_url( 'fb-capi/v1/surecart-webhook' ) ); ?></div>
     </div>
     <?php endif; ?>
 
     <div class="fbc-actions">
-        <button type="submit" name="fb_capi_save" class="fbc-btn fbc-btn-primary">💾 Enregistrer</button>
+        <button type="submit" name="fb_capi_save" class="fbc-btn fbc-btn-primary"><?php echo fbc_t( '💾 Save' ); ?></button>
     </div>
 
 </div>

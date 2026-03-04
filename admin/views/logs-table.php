@@ -16,26 +16,26 @@ if ( ! isset( $total ) ) {
 ?>
 
 <?php if ( empty( $logs ) ) : ?>
-    <div class="fbc-alert info">📭 Aucun log enregistré pour le moment.</div>
+    <div class="fbc-alert info"><?php echo fbc_t( '📭 No logs recorded yet.' ); ?></div>
 <?php else : ?>
 
     <div style="display:flex;gap:10px;margin-bottom:15px;flex-wrap:wrap;">
-        <span class="fbc-badge success" style="font-size:13px;padding:6px 14px;">✅ <?php echo $success; ?> réussis</span>
-        <span class="fbc-badge error"   style="font-size:13px;padding:6px 14px;">❌ <?php echo $errors; ?> erreurs</span>
+        <span class="fbc-badge success" style="font-size:13px;padding:6px 14px;">✅ <?php echo $success; ?> <?php echo fbc_t( 'successful' ); ?></span>
+        <span class="fbc-badge error"   style="font-size:13px;padding:6px 14px;">❌ <?php echo $errors; ?> <?php echo fbc_t( 'errors' ); ?></span>
         <span style="font-size:13px;padding:6px 14px;background:#f3f4f6;border-radius:8px;color:#6b7280;">📊 <?php echo $total; ?> total</span>
     </div>
 
     <div style="margin-bottom:12px;">
         <select id="fbc-log-filter" onchange="fbcFilterLogs(this.value)"
                 style="padding:6px 12px;border:1px solid #d1d5db;border-radius:6px;font-size:12px;">
-            <option value="all">Tous les événements</option>
+            <option value="all"><?php echo fbc_t( 'All events' ); ?></option>
             <option value="PageView">PageView</option>
             <option value="ViewContent">ViewContent</option>
             <option value="AddToCart">AddToCart</option>
             <option value="InitiateCheckout">InitiateCheckout</option>
             <option value="AddPaymentInfo">AddPaymentInfo</option>
             <option value="Purchase">Purchase</option>
-            <option value="error">❌ Erreurs uniquement</option>
+            <option value="error"><?php echo fbc_t( '❌ Errors only' ); ?></option>
         </select>
     </div>
 
@@ -43,11 +43,11 @@ if ( ! isset( $total ) ) {
         <table class="fbc-logs-table" id="fbc-logs-table">
             <thead>
                 <tr>
-                    <th>Événement</th>
+                    <th><?php echo fbc_t( 'Event' ); ?></th>
                     <th>Event ID</th>
-                    <th>Statut</th>
-                    <th>Réponse</th>
-                    <th>Date</th>
+                    <th><?php echo fbc_t( 'Status' ); ?></th>
+                    <th><?php echo fbc_t( 'Response' ); ?></th>
+                    <th><?php echo fbc_t( 'Date' ); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -66,7 +66,7 @@ if ( ! isset( $total ) ) {
                     </td>
                     <td>
                         <span class="fbc-badge <?php echo $is_success ? 'success' : 'error'; ?>">
-                            <?php echo $is_success ? '✅ OK' : '❌ Erreur'; ?>
+                            <?php echo $is_success ? '✅ OK' : fbc_t( '❌ Error' ); ?>
                         </span>
                     </td>
                     <td style="font-size:11px;max-width:260px;">

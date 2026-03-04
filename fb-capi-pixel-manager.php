@@ -2,7 +2,7 @@
 /**
  * Plugin Name: FB CAPI & Pixel Manager
  * Description: Gestionnaire Facebook Pixel & Conversions API pour SureCart & WooCommerce
- * Version:     2.4.3
+ * Version:     2.5.0
  * Author:      Wasabi Custom Dev
  * Requires PHP: 7.4
  * Requires at least: 5.8
@@ -12,7 +12,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
-define( 'FB_CAPI_VERSION',       '2.4.3' );
+define( 'FB_CAPI_VERSION',       '2.5.0' );
 define( 'FB_CAPI_FILE',          __FILE__ );
 define( 'FB_CAPI_DIR',           plugin_dir_path( __FILE__ ) );
 define( 'FB_CAPI_URL',           plugin_dir_url( __FILE__ ) );
@@ -20,6 +20,7 @@ define( 'FB_CAPI_GRAPH_VERSION', 'v25.0' );
 define( 'FB_CAPI_CAPABILITY',    'manage_options' );
 
 require_once FB_CAPI_DIR . 'includes/class-options.php';
+require_once FB_CAPI_DIR . 'includes/class-lang.php';
 require_once FB_CAPI_DIR . 'includes/class-capi.php';
 require_once FB_CAPI_DIR . 'includes/class-pixel.php';
 require_once FB_CAPI_DIR . 'includes/class-rest.php';

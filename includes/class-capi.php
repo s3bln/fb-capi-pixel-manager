@@ -131,7 +131,7 @@ class FB_Capi_Sender {
         if ( empty( $options['pixel_id'] ) || empty( $options['access_token'] ) ) {
             return [
                 'status'   => 'error',
-                'message'  => 'Pixel ID ou Access Token manquant.',
+                'message'  => fbc_t( 'Pixel ID or Access Token missing.' ),
                 'response' => '',
             ];
         }
@@ -174,8 +174,8 @@ class FB_Capi_Sender {
         return [
             'status'   => ( $code === 200 ) ? 'success' : 'error',
             'message'  => ( $code === 200 )
-                ? "✅ Test envoyé ! Event ID: {$event_id}"
-                : "Erreur HTTP {$code}",
+                ? sprintf( fbc_t( '✅ Test sent! Event ID: %s' ), $event_id )
+                : sprintf( fbc_t( 'HTTP Error %s' ), $code ),
             'response' => $body,
         ];
     }

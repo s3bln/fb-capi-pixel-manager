@@ -24,6 +24,7 @@ class FB_Capi_Options {
             'logs_events'             => [],
             'logs_retention_days'     => 30,
             'platform'                => 'none',
+            'lang'                    => 'en',
         ];
     }
 
@@ -48,6 +49,7 @@ class FB_Capi_Options {
             ]],
             'logs_retention_days'     => [ 'type' => 'select', 'allowed' => [ 0, 1, 3, 7, 14, 30, 60, 90 ] ],
             'platform'                => [ 'type' => 'select', 'allowed' => [ 'none', 'surecart', 'woocommerce' ] ],
+            'lang'                    => [ 'type' => 'select', 'allowed' => [ 'en', 'fr' ] ],
         ];
     }
 
