@@ -21,10 +21,11 @@ class FB_Capi_Sender {
     public function send(
         string $event_name,
         string $event_id,
-        array  $custom_data = [],
-        string $source_url  = '',
-        string $email       = '',
-        bool   $blocking    = true
+        array  $custom_data   = [],
+        string $source_url    = '',
+        string $email         = '',
+        bool   $blocking      = true,
+        array  $raw_user_data = []
     ): void {
         $options = FB_Capi_Options::get();
 
@@ -43,6 +44,25 @@ class FB_Capi_Sender {
         if ( ! empty( $email ) ) {
             $user_data['em'] = [ hash( 'sha256', strtolower( trim( $email ) ) ) ];
         }
+
+        // Advanced matching: normalize + hash additional user fields.
+        $field_rules = [
+            'phone'      => [ 'key' => 'ph',      'fn' => fn( $v ) => preg_replace( '/[^\d+]/', '', $v ) ],
+            'first_name' => [ 'key' => 'fn',      'fn' => fn( $v ) => strtolower( trim( $v ) ) ],
+            'last_name'  => [ 'key' => 'ln',      'fn' => fn( $v ) => strtolower( trim( $v ) ) ],
+            'city'       => [ 'key' => 'ct',      'fn' => fn( $v ) => strtolower( trim( $v ) ) ],
+            'state'      => [ 'key' => 'st',      'fn' => fn( $v ) => strtolower( trim( $v ) ) ],
+            'zip'        => [ 'key' => 'zp',      'fn' => fn( $v ) => preg_replace( '/\s+/', '', $v ) ],
+            'country'    => [ 'key' => 'country', 'fn' => fn( $v ) => strtolower( trim( $v ) ) ],
+        ];
+        foreach ( $field_rules as $input_key => $rule ) {
+            if ( empty( $raw_user_data[ $input_key ] ) ) continue;
+            $normalized = ( $rule['fn'] )( (string) $raw_user_data[ $input_key ] );
+            if ( $normalized !== '' ) {
+                $user_data[ $rule['key'] ] = [ hash( 'sha256', $normalized ) ];
+            }
+        }
+
         if ( ! empty( $_COOKIE['_fbp'] ) ) {
             $user_data['fbp'] = sanitize_text_field( $_COOKIE['_fbp'] );
         }
@@ -77,10 +97,14 @@ class FB_Capi_Sender {
             'blocking' => $blocking,
         ] );
 
-        // Non-blocking: fire-and-forget, no response available.
-        // Log as 'success' so the regex in read_logs() (SUCCESS|ERROR) can parse the entry.
+        // Non-blocking: WordPress n'attend pas la réponse de Facebook.
+        // On peut quand même détecter un échec local (DNS, SSL, connexion refusée).
         if ( ! $blocking ) {
-            $this->write_log( $event_name, $event_id, 'success', '(async)', $options );
+            if ( is_wp_error( $response ) ) {
+                $this->write_log( $event_name, $event_id, 'error', '[async] ' . $response->get_error_message(), $options );
+            } else {
+                $this->write_log( $event_name, $event_id, 'success', '(async)', $options );
+            }
             return;
         }
 

@@ -83,22 +83,45 @@ class FB_Capi_Rest {
             return new WP_REST_Response( [ 'status' => 'disabled' ], 200 );
         }
 
+        // Quand la plateforme SureCart est active, le hook PHP surecart/purchase_created
+        // gère Purchase avec les données complètes. Le webhook retourne 200 (pas de retry)
+        // mais n'envoie rien à Meta pour éviter le double comptage.
+        if ( ( $options['platform'] ?? '' ) === 'surecart' ) {
+            return new WP_REST_Response( [ 'status' => 'skipped', 'reason' => 'handled_by_php_hook' ], 200 );
+        }
+
         // Verify HMAC signature.
-        $webhook_secret = $options['webhook_secret'] ?? '';
+        // trim() au cas où le secret aurait été copié avec des espaces.
+        $webhook_secret = trim( $options['webhook_secret'] ?? '' );
         if ( empty( $webhook_secret ) ) {
             return new WP_REST_Response( [ 'status' => 'error', 'message' => 'Webhook secret not configured' ], 403 );
         }
 
-        $received_hash = sanitize_text_field(
-            $_SERVER['HTTP_X_WEBHOOK_SIGNATURE'] ?? $_SERVER['HTTP_X_SC_SIGNATURE'] ?? ''
-        );
+        // SureCart peut utiliser plusieurs noms d'en-tête selon la version, et préfixer avec "sha256=".
+        $raw_sig = $_SERVER['HTTP_X_SC_SIGNATURE']
+            ?? $_SERVER['HTTP_X_WEBHOOK_SIGNATURE']
+            ?? $_SERVER['HTTP_X_SURECART_SIGNATURE']
+            ?? $_SERVER['HTTP_X_SURECART_WEBHOOK_SIGNATURE']
+            ?? '';
+
+        // strtolower : certaines implémentations envoient le hash en majuscules.
+        $received_hash = strtolower( preg_replace( '/^sha256=/', '', sanitize_text_field( $raw_sig ) ) );
+
         if ( empty( $received_hash ) ) {
+            $http_keys = implode( ', ', array_keys( array_filter( $_SERVER, fn( $k ) => str_starts_with( $k, 'HTTP_' ), ARRAY_FILTER_USE_KEY ) ) );
+            error_log( '[FB CAPI] ❌ Webhook: signature manquante. En-têtes reçus: ' . $http_keys );
             return new WP_REST_Response( [ 'status' => 'error', 'message' => 'Missing signature' ], 403 );
         }
 
-        $raw_body      = $request->get_body();
-        $expected_hash = hash_hmac( 'sha256', $raw_body, $webhook_secret );
+        $raw_body  = $request->get_body();
+        $timestamp = sanitize_text_field( $_SERVER['HTTP_X_WEBHOOK_TIMESTAMP'] ?? '' );
+
+        // SureCart signe : hash_hmac('sha256', "{timestamp}.{body}", $secret)
+        $signed_payload = $timestamp ? $timestamp . '.' . $raw_body : $raw_body;
+        $expected_hash  = hash_hmac( 'sha256', $signed_payload, $webhook_secret );
+
         if ( ! hash_equals( $expected_hash, $received_hash ) ) {
+            error_log( '[FB CAPI] ❌ Webhook: signature invalide. timestamp=' . $timestamp );
             return new WP_REST_Response( [ 'status' => 'error', 'message' => 'Invalid signature' ], 403 );
         }
 
@@ -111,7 +134,8 @@ class FB_Capi_Rest {
             return new WP_REST_Response( [ 'status' => 'ignored' ], 200 );
         }
 
-        $data     = $body['data'] ?? [];
+        // SureCart envoie les données de l'objet dans data.object (structure événement).
+        $data = $body['data']['object'] ?? ( $body['data'] ?? [] );
         $email    = $data['email'] ?? ( $data['customer']['email'] ?? '' );
         $amount   = $data['total_amount'] ?? ( $data['amount'] ?? 0 );
         $currency = strtoupper( $data['currency'] ?? 'EUR' );
@@ -121,8 +145,9 @@ class FB_Capi_Rest {
             $amount = $amount / 100;
         }
 
-        // Deduplication by order ID.
-        $order_id = $data['id'] ?? ( $data['order_id'] ?? '' );
+        // Déduplication par checkout ID — identique à la clé utilisée dans FB_Capi_Platform_Surecart.
+        // Évite le double envoi si le hook PHP et le webhook se déclenchent tous les deux.
+        $order_id = $data['checkout'] ?? ( $data['id'] ?? ( $data['order_id'] ?? '' ) );
         if ( ! empty( $order_id ) ) {
             $processed = get_option( 'fb_capi_processed_orders', [] );
             if ( in_array( $order_id, $processed, true ) ) {
@@ -135,12 +160,46 @@ class FB_Capi_Rest {
             update_option( 'fb_capi_processed_orders', $processed );
         }
 
-        $event_id = 'fb_purchase_' . ( $order_id ?: bin2hex( random_bytes( 12 ) ) );
+        // Extract line items for content_ids / num_items.
+        $line_items_raw = $data['line_items']['data'] ?? ( $data['line_items'] ?? [] );
+        $content_ids    = [];
+        $num_items      = 0;
+        foreach ( (array) $line_items_raw as $item ) {
+            $pid = $item['product']['id'] ?? ( $item['product_id'] ?? '' );
+            if ( $pid ) {
+                $content_ids[] = (string) $pid;
+            }
+            $num_items += (int) ( $item['quantity'] ?? 1 );
+        }
 
-        ( new FB_Capi_Sender() )->send( 'Purchase', $event_id, [
+        $custom_data = [
             'value'    => (float) $amount,
             'currency' => $currency,
-        ], '', $email );
+        ];
+        if ( $content_ids ) {
+            $custom_data['content_ids']  = $content_ids;
+            $custom_data['content_type'] = 'product';
+            $custom_data['num_items']    = $num_items ?: count( $content_ids );
+        }
+
+        // Advanced matching from billing address.
+        $billing       = $data['billing_address'] ?? ( $data['address'] ?? [] );
+        $customer_name = $data['customer']['name'] ?? ( $data['name'] ?? '' );
+        $name_parts    = $customer_name ? explode( ' ', $customer_name, 2 ) : [];
+        $raw_user_data = array_filter( [
+            'first_name' => $name_parts[0] ?? '',
+            'last_name'  => $name_parts[1] ?? '',
+            'phone'      => $data['phone'] ?? ( $billing['phone'] ?? '' ),
+            'city'       => $billing['city'] ?? '',
+            'state'      => $billing['state'] ?? '',
+            'zip'        => $billing['postal_code'] ?? ( $billing['zip'] ?? '' ),
+            'country'    => $billing['country'] ?? '',
+        ] );
+
+        $event_id = 'fb_purchase_' . ( $order_id ?: bin2hex( random_bytes( 8 ) ) );
+
+        // Webhook = requête serveur-à-serveur, pas de referer disponible → home_url() par défaut.
+        ( new FB_Capi_Sender() )->send( 'Purchase', $event_id, $custom_data, home_url( '/' ), $email, true, $raw_user_data );
 
         return new WP_REST_Response( [
             'status'   => 'sent',

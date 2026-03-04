@@ -23,7 +23,7 @@ class FB_Capi_Options {
             'logs_enabled'            => 1,
             'logs_events'             => [],
             'logs_retention_days'     => 30,
-            'platform'                => 'surecart',
+            'platform'                => 'none',
         ];
     }
 
@@ -47,7 +47,7 @@ class FB_Capi_Options {
                 'InitiateCheckout', 'AddPaymentInfo', 'Purchase',
             ]],
             'logs_retention_days'     => [ 'type' => 'select', 'allowed' => [ 0, 1, 3, 7, 14, 30, 60, 90 ] ],
-            'platform'                => [ 'type' => 'select', 'allowed' => [ 'surecart', 'woocommerce' ] ],
+            'platform'                => [ 'type' => 'select', 'allowed' => [ 'none', 'surecart', 'woocommerce' ] ],
         ];
     }
 
@@ -138,10 +138,22 @@ class FB_Capi_Options {
         return $sanitized;
     }
 
+    /** Cache — invalidé après chaque save via invalidate_cache(). */
+    private static ?array $cache = null;
+
     /**
      * Shorthand: get current options merged with defaults.
+     * Mis en cache — vider le cache via invalidate_cache() après update_option().
      */
     public static function get(): array {
-        return wp_parse_args( get_option( 'fb_capi_options', [] ), self::defaults() );
+        if ( self::$cache === null ) {
+            self::$cache = wp_parse_args( get_option( 'fb_capi_options', [] ), self::defaults() );
+        }
+        return self::$cache;
+    }
+
+    /** Vide le cache après une mise à jour des options. */
+    public static function invalidate_cache(): void {
+        self::$cache = null;
     }
 }

@@ -45,6 +45,61 @@
     </div>
 
     <div class="fbc-card">
+        <div class="fbc-card-title">🛒 Plateforme e-commerce</div>
+
+        <?php
+        $sc_active        = defined( 'SURECART_VERSION' ) || class_exists( 'SureCart' );
+        $wc_active        = class_exists( 'WooCommerce' );
+        $saved_platform   = $options['platform'] ?? 'none';
+
+        $platforms = [
+            'none'        => [
+                'label'     => 'Aucune',
+                'desc'      => 'Seul PageView est géré automatiquement',
+                'available' => true,
+            ],
+            'surecart'    => [
+                'label'     => 'SureCart',
+                'desc'      => 'Webhook Purchase + sélecteurs web components',
+                'available' => $sc_active,
+            ],
+            'woocommerce' => [
+                'label'     => 'WooCommerce',
+                'desc'      => 'Hook woocommerce_thankyou + sélecteurs DOM standards',
+                'available' => $wc_active,
+            ],
+        ];
+
+        // Si la plateforme sauvegardée n'est plus disponible, afficher "Aucune" comme sélectionnée.
+        $ui_platform = ( isset( $platforms[ $saved_platform ] ) && $platforms[ $saved_platform ]['available'] )
+            ? $saved_platform
+            : 'none';
+        ?>
+
+        <div class="fbc-platform-list">
+            <?php foreach ( $platforms as $value => $p ) :
+                $unavailable = ! $p['available'];
+            ?>
+            <label class="fbc-platform-option<?php echo $unavailable ? ' fbc-platform-unavailable' : ''; ?>">
+                <input type="radio" name="platform"
+                       value="<?php echo esc_attr( $value ); ?>"
+                       <?php checked( $ui_platform, $value ); ?>
+                       <?php echo $unavailable ? 'disabled' : ''; ?> />
+                <div class="fbc-platform-info">
+                    <span class="fbc-platform-name"><?php echo esc_html( $p['label'] ); ?></span>
+                    <span class="fbc-platform-desc"><?php echo esc_html( $p['desc'] ); ?></span>
+                </div>
+                <?php if ( $value !== 'none' ) : ?>
+                <span class="fbc-platform-badge <?php echo $p['available'] ? 'detected' : 'not-detected'; ?>">
+                    <?php echo $p['available'] ? '✓ Détecté' : '✗ Non installé'; ?>
+                </span>
+                <?php endif; ?>
+            </label>
+            <?php endforeach; ?>
+        </div>
+    </div>
+
+    <div class="fbc-card">
         <div class="fbc-card-title">📡 Canaux d'envoi</div>
 
         <div class="fbc-toggle-row">

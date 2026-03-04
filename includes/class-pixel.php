@@ -46,7 +46,9 @@ class FB_Capi_Pixel {
         <?php if ( ! empty( $options['enable_pageview'] ) ) : ?>
         fbq('track', 'PageView', {}, {eventID: '<?php echo $event_id; ?>'});
         <?php endif; ?>
-        // Anti-duplicate filter: blocks fbq('track') calls without an eventID.
+        // Filtre anti-doublon : bloque les fbq('track') sans eventID (ex : pixel natif SureCart).
+        // Correction : après chargement du SDK, window.fbq.callMethod est défini sur notre wrapper —
+        // on l'utilise directement au lieu du stub d'origine qui ne le possède pas.
         (function(){
             var realFbq = fbq;
             function hasFbId(args) {
@@ -57,7 +59,13 @@ class FB_Capi_Pixel {
             }
             window.fbq = function() {
                 var args = [].slice.call(arguments);
-                if (args[0] !== 'track' || hasFbId(args)) return realFbq.apply(window, args);
+                if (args[0] !== 'track' || hasFbId(args)) {
+                    if (typeof window.fbq.callMethod === 'function') {
+                        window.fbq.callMethod.apply(window.fbq, args);
+                    } else {
+                        realFbq.apply(window, args);
+                    }
+                }
             };
             window.fbq.queue   = realFbq.queue;
             window.fbq.loaded  = realFbq.loaded;
@@ -72,16 +80,41 @@ class FB_Capi_Pixel {
     // ── wp_footer (priority 5) : server-side PageView ─────────────────────────
 
     public function send_server_pageview(): void {
+        static $sent = false;
+        if ( $sent ) return;
+        $sent = true;
+
         $options = FB_Capi_Options::get();
         if ( empty( $options['enable_capi'] ) || empty( $options['enable_pageview'] ) ) return;
         if ( is_admin() || wp_doing_ajax() || defined( 'REST_REQUEST' ) ) return;
+
+        // Ignore les requêtes de préchargement navigateur (prefetch/prerender).
+        // Chrome/Edge envoient Sec-Purpose: prefetch — pas une vraie visite utilisateur.
+        $sec_purpose = strtolower( $_SERVER['HTTP_SEC_PURPOSE'] ?? '' );
+        $purpose     = strtolower( $_SERVER['HTTP_PURPOSE']     ?? '' );
+        if ( strpos( $sec_purpose, 'prefetch' ) !== false || strpos( $purpose, 'prefetch' ) !== false ) return;
+
+        // WooCommerce frontend AJAX (cart fragments, etc.) — non capturé par wp_doing_ajax().
+        if ( isset( $_GET['wc-ajax'] ) ) return;
+
+        // Requête XHR/fetch (jQuery $.ajax, fetch API) — pas une navigation réelle.
+        if ( strtolower( $_SERVER['HTTP_X_REQUESTED_WITH'] ?? '' ) === 'xmlhttprequest' ) return;
 
         // Re-use the same event_id defined in inject_pixel() for deduplication.
         $event_id = defined( 'FB_CAPI_EVENT_ID' )
             ? FB_CAPI_EVENT_ID
             : ( 'fb_' . bin2hex( random_bytes( 16 ) ) );
 
-        ( new FB_Capi_Sender() )->send( 'PageView', $event_id );
+        // PHP-FPM: flush the response to the browser first, then send blocking (real log).
+        // Other environments: non-blocking fallback (no latency, but no real response in logs).
+        if ( function_exists( 'fastcgi_finish_request' ) ) {
+            add_action( 'shutdown', static function () use ( $event_id ) {
+                fastcgi_finish_request();
+                ( new FB_Capi_Sender() )->send( 'PageView', $event_id, [], '', '', true );
+            } );
+        } else {
+            ( new FB_Capi_Sender() )->send( 'PageView', $event_id, [], '', '', false );
+        }
     }
 
     // ── wp_footer (priority 50) : dynamic JS events ───────────────────────────
@@ -91,9 +124,14 @@ class FB_Capi_Pixel {
         if ( empty( $options['enable_pixel_js'] ) || empty( $options['pixel_id'] ) ) return;
         if ( is_admin() ) return;
 
-        $enable_vc  = ! empty( $options['enable_viewcontent'] );
-        $enable_atc = ! empty( $options['enable_addtocart'] );
-        $enable_ic  = ! empty( $options['enable_initiatecheckout'] );
+        $platform   = $options['platform'] ?? 'none';
+        $enable_vc  = ! empty( $options['enable_viewcontent'] )      && $platform !== 'none';
+        $enable_atc = ! empty( $options['enable_addtocart'] )        && $platform !== 'none';
+        $enable_ic  = ! empty( $options['enable_initiatecheckout'] ) && $platform !== 'none';
+
+        // Évite rest_url() + wp_create_nonce() si aucun événement e-commerce n'est actif.
+        if ( ! $enable_vc && ! $enable_atc && ! $enable_ic ) return;
+
         $capi_url   = esc_url( rest_url( 'fb-capi/v1/event' ) );
         $nonce      = wp_create_nonce( 'wp_rest' );
         ?>
@@ -121,21 +159,42 @@ class FB_Capi_Pixel {
                 }).catch(function () {});
             }
 
-            <?php if ( $enable_vc ) : ?>
+                <?php if ( $enable_vc ) : ?>
             // ── ViewContent ──────────────────────────────────────────────────
             (function () {
-                var selectors = '.sc-product-page, [data-sc-product], .surecart-product, sc-product, sc-product-item-list';
-                if (document.querySelector(selectors)) {
-                    var vid = genId();
-                    fbq('track', 'ViewContent', {}, { eventID: vid });
-                    sendServer('ViewContent', vid);
-                }
+                <?php if ( $platform === 'woocommerce' ) : ?>
+                var cartForm = document.querySelector('body.single-product form.cart');
+                if (!cartForm) return;
+                var pInput = cartForm.querySelector('input[name="product_id"]') ||
+                             cartForm.querySelector('input[name="add-to-cart"]');
+                var contentId = pInput ? pInput.value : '';
+                <?php else : // surecart ?>
+                var scEl = document.querySelector('sc-product, sc-product-item-list, .sc-product-page, [data-sc-product]');
+                if (!scEl) return;
+                var contentId = scEl.getAttribute('product-id') || scEl.getAttribute('data-sc-product-id') || '';
+                <?php endif; ?>
+                var vid = genId();
+                var vData = { content_type: 'product' };
+                if (contentId) vData.content_ids = [contentId];
+                fbq('track', 'ViewContent', vData, { eventID: vid });
+                sendServer('ViewContent', vid, vData);
             })();
             <?php endif; ?>
 
             <?php if ( $enable_atc ) : ?>
             // ── AddToCart ────────────────────────────────────────────────────
             document.addEventListener('click', function (e) {
+                <?php if ( $platform === 'woocommerce' ) : ?>
+                var btn = e.target.closest('.single_add_to_cart_button, .add_to_cart_button');
+                if (!btn) return;
+                var form = btn.closest('form.cart');
+                var contentId = '';
+                if (form) {
+                    var pInput = form.querySelector('input[name="product_id"]') ||
+                                 form.querySelector('input[name="add-to-cart"]');
+                    if (pInput) contentId = pInput.value;
+                }
+                <?php else : // surecart ?>
                 var btn = e.target.closest(
                     '.sc-add-to-cart, [data-sc-add-to-cart], .surecart-add-to-cart, sc-product-buy-button, .sc-buy-button, button[type="submit"]'
                 );
@@ -144,14 +203,27 @@ class FB_Capi_Pixel {
                     '.sc-product-page, [data-sc-product], .surecart-product, sc-product, sc-checkout, .sc-checkout-form'
                 );
                 if (!inSC) return;
+                var contentId = '';
+                <?php endif; ?>
                 var aid = genId();
-                fbq('track', 'AddToCart', {}, { eventID: aid });
-                sendServer('AddToCart', aid);
+                var aData = { content_type: 'product' };
+                if (contentId) aData.content_ids = [contentId];
+                fbq('track', 'AddToCart', aData, { eventID: aid });
+                sendServer('AddToCart', aid, aData);
             });
             <?php endif; ?>
 
             <?php if ( $enable_ic ) : ?>
             // ── InitiateCheckout ─────────────────────────────────────────────
+            <?php if ( $platform === 'woocommerce' ) : ?>
+            (function () {
+                if (document.querySelector('body.woocommerce-checkout, .woocommerce-checkout form.checkout')) {
+                    var iid = genId();
+                    fbq('track', 'InitiateCheckout', {}, { eventID: iid });
+                    sendServer('InitiateCheckout', iid);
+                }
+            })();
+            <?php else : // surecart — async web components need observer + timers ?>
             var icDone = false;
             var icObs  = null;
             var icTimers = [];
@@ -159,7 +231,6 @@ class FB_Capi_Pixel {
             function fireIC() {
                 if (icDone) return;
                 icDone = true;
-                // Cleanup: stop observer and pending timers immediately.
                 if (icObs) { icObs.disconnect(); icObs = null; }
                 icTimers.forEach(clearTimeout);
                 var iid = genId();
@@ -176,11 +247,10 @@ class FB_Capi_Pixel {
                     if (document.querySelector('[class*="surecart"], [class*="sc-"], sc-line-items, sc-order-summary, sc-payment')) {
                         fireIC(); return;
                     }
-                    fireIC(); // ultimate fallback
+                    fireIC();
                 }
             }
             checkIC();
-            // Only install the observer and timers if IC hasn't already fired.
             if (!icDone) {
                 icObs = new MutationObserver(function () { checkIC(); });
                 icObs.observe(document.body, { childList: true, subtree: true });
@@ -188,6 +258,7 @@ class FB_Capi_Pixel {
                     return setTimeout(checkIC, t);
                 });
             }
+            <?php endif; ?>
             <?php endif; ?>
 
         })();

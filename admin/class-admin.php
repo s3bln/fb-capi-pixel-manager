@@ -57,6 +57,7 @@ class FB_Capi_Admin {
         // ── Save main settings (Réglages + Événements) ────────────────────────
         if ( isset( $_POST['fb_capi_save'] ) && check_admin_referer( 'fb_capi_nonce' ) ) {
             update_option( 'fb_capi_options', FB_Capi_Options::sanitize_all( $_POST ) );
+            FB_Capi_Options::invalidate_cache();
             $notice     = '<div class="fbc-alert success">✅ Réglages enregistrés avec succès !</div>';
             $active_tab = 'settings';
         }
@@ -77,6 +78,7 @@ class FB_Capi_Admin {
             }
 
             update_option( 'fb_capi_options', $current );
+            FB_Capi_Options::invalidate_cache();
             $notice     = '<div class="fbc-alert success">✅ Paramètres des logs enregistrés !</div>';
             $active_tab = 'logs';
         }

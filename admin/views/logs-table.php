@@ -69,8 +69,14 @@ if ( ! isset( $total ) ) {
                             <?php echo $is_success ? '✅ OK' : '❌ Erreur'; ?>
                         </span>
                     </td>
-                    <td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#9ca3af;">
-                        <?php echo esc_html( substr( $log['response'] ?? '', 0, 100 ) ); ?>
+                    <td style="font-size:11px;max-width:260px;">
+                        <?php if ( ! $is_success && ! empty( $log['response'] ) ) : ?>
+                            <span style="color:#dc2626;word-break:break-word;">
+                                <?php echo esc_html( substr( $log['response'], 0, 120 ) ); ?>
+                            </span>
+                        <?php else : ?>
+                            <span style="color:#d1d5db;">—</span>
+                        <?php endif; ?>
                     </td>
                     <td style="white-space:nowrap;font-size:12px;">
                         <?php echo esc_html( $log['time'] ?? '' ); ?>
